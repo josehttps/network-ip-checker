@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Network IP Checker</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background: #f4f6f8;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            width: 450px;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            margin-top: 0;
+            margin-bottom: 5px;
+            text-align: center;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #777;
+            margin-top: 0;
+            margin-bottom: 25px;
+            font-size: 14px;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px;
+            margin: 10px 0 15px 0;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            font-size: 16px;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: #222;
+        }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 6px;
+            background: #222;
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #444;
+        }
+
+        #resultado {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 8px;
+            background: #f1f1f1;
+            display: none;
+        }
+
+        .informacoes {
+            margin-bottom: 20px;
+        }
+
+        .linha {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .linha:last-child {
+            border-bottom: none;
+        }
+
+        .label {
+            font-weight: bold;
+        }
+
+        .online {
+            color: #198754;
+            font-weight: bold;
+        }
+
+        .offline {
+            color: #dc3545;
+            font-weight: bold;
+        }
+
+        .titulo-portas {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .porta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            margin-bottom: 8px;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+        }
+
+        .porta-info {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .porta-numero {
+            font-weight: bold;
+        }
+
+        .porta-servico {
+            font-size: 13px;
+            color: #777;
+            margin-top: 3px;
+        }
+
+        .aberta {
+            color: #198754;
+            font-weight: bold;
+        }
+
+        .fechada {
+            color: #dc3545;
+            font-weight: bold;
+        }
+
+        .erro {
+            color: #dc3545;
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="container">
+
+    <h1>Network IP Checker</h1>
+
+    <p class="subtitle">
+        Verificação de conectividade e serviços de rede
+    </p>
+
+    <input
+        type="text"
+        id="ip"
+        placeholder="Digite o endereço IP"
+    >
+
+    <button onclick="verificarIP()">
+        VERIFICAR
+    </button>
+
+    <div id="resultado"></div>
+
+</div>
+
+<script>
+
+async function verificarIP() {
+
+    const ip = document.getElementById("ip").value.trim();
+    const resultado = document.getElementById("resultado");
+
+    if (!ip) {
+
+        resultado.style.display = "block";
+
+        resultado.innerHTML = `
+            <div class="erro">
+                Digite um endereço IP.
+            </div>
+        `;
+
+        return;
+    }
+
+    resultado.style.display = "block";
+
+    resultado.innerHTML = `
+        <div>
+            Verificando...
+        </div>
+    `;
+
+    try {
+
+        const resposta = await fetch(
+            `/verificar/${encodeURIComponent(ip)}`
+        );
+
+        const dados = await resposta.json();
+
+        /*
+         * Tratamento de erros retornados pela API
+         */
+        if (
+            dados.status === "IP inválido" ||
+            dados.status === "IP não autorizado" ||
+            dados.status === "LIMITE ATINGIDO"
+        ) {
+
+            resultado.innerHTML = "";
+
+            const mensagem = document.createElement("div");
+            mensagem.className = "erro";
+
+            mensagem.textContent =
+                dados.mensagem || dados.status;
+
+            resultado.appendChild(mensagem);
+
+            return;
+        }
+
+
+        /*
+         * Status ONLINE / OFFLINE
+         */
+        let statusClasse = "";
+
+        if (dados.status === "ONLINE") {
+            statusClasse = "online";
+
+        } else if (dados.status === "OFFLINE") {
+            statusClasse = "offline";
+        }
+
+
+        /*
+         * Criação das informações principais
+         */
+        resultado.innerHTML = "";
+
+        const informacoes = document.createElement("div");
+        informacoes.className = "informacoes";
+
+
+        /*
+         * IP
+         */
+        const linhaIP = document.createElement("div");
+        linhaIP.className = "linha";
+
+        const labelIP = document.createElement("span");
+        labelIP.className = "label";
+        labelIP.textContent = "IP:";
+
+        const valorIP = document.createElement("span");
+        valorIP.textContent = dados.ip;
+
+        linhaIP.appendChild(labelIP);
+        linhaIP.appendChild(valorIP);
+
+
+        /*
+         * Status
+         */
+        const linhaStatus = document.createElement("div");
+        linhaStatus.className = "linha";
+
+        const labelStatus = document.createElement("span");
+        labelStatus.className = "label";
+        labelStatus.textContent = "Status:";
+
+        const valorStatus = document.createElement("span");
+        valorStatus.className = statusClasse;
+        valorStatus.textContent = dados.status;
+
+        linhaStatus.appendChild(labelStatus);
+        linhaStatus.appendChild(valorStatus);
+
+
+        /*
+         * Ping
+         */
+        const linhaPing = document.createElement("div");
+        linhaPing.className = "linha";
+
+        const labelPing = document.createElement("span");
+        labelPing.className = "label";
+        labelPing.textContent = "Ping:";
+
+        const valorPing = document.createElement("span");
+
+        if (dados.ping_ms !== null) {
+            valorPing.textContent = `${dados.ping_ms} ms`;
+        } else {
+            valorPing.textContent = "Não disponível";
+        }
+
+        linhaPing.appendChild(labelPing);
+        linhaPing.appendChild(valorPing);
+
+
+        /*
+         * Hostname
+         *
+         * IMPORTANTE:
+         * Usamos textContent em vez de inserir
+         * o hostname diretamente com innerHTML.
+         */
+        const linhaHostname = document.createElement("div");
+        linhaHostname.className = "linha";
+
+        const labelHostname = document.createElement("span");
+        labelHostname.className = "label";
+        labelHostname.textContent = "Hostname:";
+
+        const valorHostname = document.createElement("span");
+
+        valorHostname.textContent =
+            dados.hostname || "Não encontrado";
+
+        linhaHostname.appendChild(labelHostname);
+        linhaHostname.appendChild(valorHostname);
+
+
+        /*
+         * Adiciona as informações ao resultado
+         */
+        informacoes.appendChild(linhaIP);
+        informacoes.appendChild(linhaStatus);
+        informacoes.appendChild(linhaPing);
+        informacoes.appendChild(linhaHostname);
+
+        resultado.appendChild(informacoes);
+
+
+        /*
+         * Título das portas
+         */
+        const tituloPortas = document.createElement("div");
+
+        tituloPortas.className = "titulo-portas";
+        tituloPortas.textContent = "Portas e Serviços";
+
+        resultado.appendChild(tituloPortas);
+
+
+        /*
+         * Portas
+         */
+        if (dados.portas) {
+
+            for (
+                const [porta, dadosPorta]
+                of Object.entries(dados.portas)
+            ) {
+
+                const portaElemento =
+                    document.createElement("div");
+
+                portaElemento.className = "porta";
+
+
+                /*
+                 * Informações da porta
+                 */
+                const portaInfo =
+                    document.createElement("div");
+
+                portaInfo.className = "porta-info";
+
+
+                const portaNumero =
+                    document.createElement("div");
+
+                portaNumero.className = "porta-numero";
+
+                portaNumero.textContent =
+                    `Porta ${porta}`;
+
+
+                const portaServico =
+                    document.createElement("div");
+
+                portaServico.className = "porta-servico";
+
+                portaServico.textContent =
+                    dadosPorta.servico;
+
+
+                portaInfo.appendChild(portaNumero);
+                portaInfo.appendChild(portaServico);
+
+
+                /*
+                 * Status da porta
+                 */
+                const statusPorta =
+                    document.createElement("div");
+
+                if (dadosPorta.aberta) {
+
+                    statusPorta.className = "aberta";
+                    statusPorta.textContent = "✓ Aberta";
+
+                } else {
+
+                    statusPorta.className = "fechada";
+                    statusPorta.textContent = "✗ Fechada";
+                }
+
+
+                /*
+                 * Monta o elemento da porta
+                 */
+                portaElemento.appendChild(portaInfo);
+                portaElemento.appendChild(statusPorta);
+
+                resultado.appendChild(portaElemento);
+            }
+        }
+
+    } catch (erro) {
+
+        resultado.innerHTML = "";
+
+        const mensagemErro =
+            document.createElement("div");
+
+        mensagemErro.className = "erro";
+
+        mensagemErro.textContent =
+            "Erro ao realizar a verificação.";
+
+        resultado.appendChild(mensagemErro);
+
+        console.error(erro);
+    }
+}
+
+</script>
+
+</body>
+</html>
